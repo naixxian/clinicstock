@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ClinicStock — Stock Entry</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --teal:       #028090;
+    --teal-dark:  #015F6A;
+    --teal-light: #B2DFE4;
+    --teal-pale:  #E8F6F8;
+    --navy:       #1B2A3B;
+    --white:      #FFFFFF;
+    --off:        #F0F4F8;
+    --slate:      #64748B;
+    --border:     #CBD5E1;
+    --text:       #1E293B;
+    --red:        #E53E3E;
+    --red-pale:   #FFF5F5;
+    --amber:      #D97706;
+    --green:      #059669;
+    --green-pale: #F0FDF4;
+    --input-bg:   #F8FAFC;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--off); min-height: 100vh; color: var(--text); }
+
+  /* HEADER */
+  .header {
+    background: var(--navy);
+    padding: 20px 20px 0;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+  }
+  .header-row { display:flex; justify-content:space-between; align-items:center; padding-bottom:16px; }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:38px;height:38px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px; }
+  .logo h1 { font-size:18px;font-weight:800;color:var(--white); }
+  .logo p  { font-size:11px;color:var(--teal-light); }
+  .today-pill { background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:var(--teal-light);font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px; }
+  .tab-bar { display:flex;background:rgba(255,255,255,0.07);border-radius:10px 10px 0 0;padding:4px 4px 0;gap:2px; }
+  .tab-btn { flex:1;padding:9px 4px;border:none;background:transparent;color:rgba(255,255,255,0.5);font-family:inherit;font-size:12px;font-weight:600;border-radius:8px 8px 0 0;cursor:pointer;transition:all 0.2s; }
+  .tab-btn.active { background:var(--off);color:var(--navy); }
+
+  /* CONTENT */
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+  .content { padding:20px 16px; max-width:480px; margin:0 auto; }
+
+  /* TYPE TOGGLE */
+  .type-toggle { display:flex;gap:10px;margin-bottom:18px; }
+  .type-btn { flex:1;padding:16px 8px;border:2px solid var(--border);border-radius:14px;background:var(--white);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:4px; }
+  .type-btn .ico { font-size:26px; }
+  .type-btn .sub { font-size:10px;font-weight:600;color:var(--slate); }
+  .type-btn.in.active  { border-color:var(--green);background:var(--green-pale);color:var(--green); }
+  .type-btn.out.active { border-color:var(--red);background:var(--red-pale);color:var(--red); }
+
+  /* SECTION LABEL */
+  .s-label { font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--slate);text-transform:uppercase;margin:18px 0 8px; }
+  .s-label:first-child { margin-top:0; }
+
+  /* CATEGORY CHIPS */
+  .cat-row { display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px; }
+  .cat-chip { padding:8px 14px;border:1.5px solid var(--border);border-radius:20px;font-family:inherit;font-size:12px;font-weight:700;background:var(--white);cursor:pointer;transition:all 0.15s;color:var(--slate); }
+  .cat-chip.active { border-color:var(--teal);background:var(--teal-pale);color:var(--teal-dark); }
+
+  /* ITEM SEARCH / DROPDOWN */
+  .item-search-wrap { position:relative; }
+  .item-search-wrap input {
+    width:100%;padding:14px 14px 14px 42px;
+    border:1.5px solid var(--border);border-radius:12px;
+    font-family:inherit;font-size:15px;color:var(--text);
+    background:var(--input-bg);transition:all 0.2s;
+    -webkit-appearance:none;
+  }
+  .item-search-wrap input:focus { outline:none;border-color:var(--teal);background:var(--white);box-shadow:0 0 0 3px rgba(2,128,144,0.1); }
+  .item-search-icon { position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none; }
+  .loading-dots { position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--slate); }
+
+  /* DROPDOWN LIST */
+  .item-dropdown {
+    position:absolute;top:calc(100% + 4px);left:0;right:0;
+    background:var(--white);border:1.5px solid var(--teal);border-radius:12px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.15);
+    max-height:260px;overflow-y:auto;z-index:200;
+    display:none;
+  }
+  .item-dropdown.open { display:block; }
+  .dropdown-item {
+    padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;transition:background 0.1s;
+  }
+  .dropdown-item:last-child { border-bottom:none; }
+  .dropdown-item:active { background:var(--teal-pale); }
+  .dropdown-item .d-name { font-size:14px;font-weight:700;color:var(--navy); }
+  .dropdown-item .d-sub  { font-size:11px;color:var(--slate);margin-top:2px; }
+  .dropdown-item .d-stock { font-size:12px;font-weight:700; }
+  .stock-ok  { color:var(--green); }
+  .stock-low { color:var(--red); }
+  .add-new-row {
+    padding:13px 16px;display:flex;align-items:center;gap:10px;
+    background:var(--teal-pale);cursor:pointer;border-radius:0 0 10px 10px;
+    font-size:13px;font-weight:700;color:var(--teal-dark);
+    border-top:1.5px dashed var(--teal-light);
+  }
+
+  /* SELECTED ITEM CARD */
+  .selected-item-card {
+    background:var(--teal-pale);border:1.5px solid var(--teal-light);
+    border-radius:12px;padding:12px 16px;margin-bottom:14px;
+    display:none;
+  }
+  .selected-item-card.show { display:flex;justify-content:space-between;align-items:center; }
+  .sic-name { font-size:14px;font-weight:800;color:var(--navy); }
+  .sic-meta { font-size:11px;color:var(--teal-dark);margin-top:2px; }
+  .sic-clear { background:none;border:none;font-size:18px;cursor:pointer;color:var(--slate); }
+
+  /* ADD NEW ITEM FORM */
+  .add-new-panel {
+    background:var(--white);border:2px dashed var(--teal-light);
+    border-radius:14px;padding:16px;margin-bottom:14px;display:none;
+  }
+  .add-new-panel.show { display:block; }
+  .add-new-title { font-size:14px;font-weight:800;color:var(--teal-dark);margin-bottom:12px; }
+
+  /* INPUTS */
+  .input-group { margin-bottom:14px; }
+  .input-group label { display:block;font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px; }
+  .input-group label .req { color:var(--red); }
+  input[type="text"],input[type="number"],input[type="date"],select,textarea {
+    width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:10px;
+    font-family:inherit;font-size:15px;color:var(--text);background:var(--input-bg);
+    transition:border-color 0.2s;-webkit-appearance:none;appearance:none;
+  }
+  input:focus,select:focus,textarea:focus { outline:none;border-color:var(--teal);background:var(--white);box-shadow:0 0 0 3px rgba(2,128,144,0.1); }
+  textarea { resize:none;height:76px; }
+  .row-2 { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+
+  /* SUBMIT */
+  .submit-btn {
+    width:100%;padding:18px;background:var(--teal);color:var(--white);
+    border:none;border-radius:14px;font-family:inherit;font-size:16px;font-weight:800;
+    cursor:pointer;margin-top:24px;transition:all 0.2s;
+    box-shadow:0 4px 16px rgba(2,128,144,0.3);
+  }
+  .submit-btn:disabled { background:var(--slate);box-shadow:none;cursor:not-allowed;opacity:0.6; }
+  .submit-btn:not(:disabled):active { transform:scale(0.98); }
+  .submit-hint { font-size:11px;color:var(--slate);text-align:center;margin-top:6px;font-style:italic; }
+  .submit-hint.show { display:block; }
+  .submit-hint { display:none; }
+  .dropdown-empty { padding:10px 14px;font-size:12px;color:var(--slate);font-style:italic;border-bottom:1px solid var(--border);background:#FFFBEB; }
+
+  /* SUCCESS */
+  .success-view { display:none;text-align:center;padding:50px 20px;animation:fadeIn 0.3s; }
+  .success-icon { width:80px;height:80px;background:var(--green-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;margin:0 auto 20px;border:3px solid var(--green); }
+  .success-view h2 { font-size:22px;font-weight:800;color:var(--navy); }
+  .success-view p  { color:var(--slate);margin-top:8px;font-size:14px; }
+  .detail-card { background:var(--off);border-radius:12px;padding:16px;margin:20px 0;text-align:left; }
+  .detail-row { display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border); }
+  .detail-row:last-child { border:none; }
+  .detail-row span:first-child { color:var(--slate); }
+  .detail-row span:last-child  { font-weight:700;color:var(--navy); }
+  .another-btn { background:var(--navy);color:var(--white);border:none;padding:14px 32px;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer; }
+
+  /* LOADING */
+  .loading-view { display:none;text-align:center;padding:60px 20px; }
+  .spinner { width:44px;height:44px;border:4px solid var(--teal-pale);border-top-color:var(--teal);border-radius:50%;margin:0 auto 16px;animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+
+  /* HISTORY */
+  .history-list { display:flex;flex-direction:column;gap:10px; }
+  .history-item { background:var(--white);border-radius:12px;padding:14px 16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center; }
+  .h-name { font-size:14px;font-weight:700;color:var(--navy); }
+  .h-meta { font-size:11px;color:var(--slate);margin-top:3px; }
+  .h-badge { padding:5px 12px;border-radius:20px;font-size:12px;font-weight:800; }
+  .h-badge.in  { background:var(--green-pale);color:var(--green); }
+  .h-badge.out { background:var(--red-pale);color:var(--red); }
+
+  /* SETUP */
+  .setup-card { background:var(--white);border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid var(--border); }
+  .setup-card h3 { font-size:14px;font-weight:800;color:var(--navy);margin-bottom:12px; }
+  .notice { background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:10px;padding:12px 14px;font-size:12px;color:#78350F;line-height:1.7;margin-bottom:14px; }
+  .notice strong { display:block;font-size:13px;margin-bottom:4px; }
+  .tip { background:var(--teal-pale);border:1.5px solid var(--teal-light);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--teal-dark);line-height:1.7;margin-top:14px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <div class="logo">
+      <div class="logo-icon">🏥</div>
+      <div>
+        <h1>ClinicStock</h1>
+        <p id="clinicLabel">Stock Entry</p>
+      </div>
+    </div>
+    <div class="today-pill" id="todayPill"></div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab('stockin',this)">📥 Stock In</button>
+    <button class="tab-btn" onclick="showTab('order',this)">📦 Order</button>
+    <button class="tab-btn" onclick="showTab('roomcheck',this)">🔧 Room Check</button>
+    <button class="tab-btn" onclick="showTab('setup',this)" style="flex:0 0 50px;">⚙️</button>
+  </div>
+</div>
+
+<!-- ── ENTRY TAB ── -->
+<div id="tab-stockin" class="tab-content active">
+  <div class="content">
+
+    <div id="form-view">
+      <!-- TYPE — Stock In tab is IN-only. Order tab handles outflow. -->
+      <div class="type-toggle" style="display:none;">
+        <button class="type-btn in active" onclick="setType('IN')">
+          <span class="ico">📥</span><span>STOCK IN</span><span class="sub">Delivery received</span>
+        </button>
+        <button class="type-btn out" onclick="setType('OUT')" style="display:none;">
+          <span class="ico">📤</span><span>STOCK OUT</span><span class="sub">Moved to room</span>
+        </button>
+      </div>
+
+      <!-- CATEGORY -->
+      <p class="s-label">Category</p>
+      <div class="cat-row">
+        <button class="cat-chip active" onclick="setCat(this,'PPE')">🟢 PPE</button>
+        <button class="cat-chip" onclick="setCat(this,'Restorative')">🔵 Restorative</button>
+        <button class="cat-chip" onclick="setCat(this,'Endodontics')">🟣 Endodontics</button>
+        <button class="cat-chip" onclick="setCat(this,'Disposables')">🟡 Disposables</button>
+        <button class="cat-chip" onclick="setCat(this,'Cleaning & Disinfection')">🟠 Cleaning</button>
+        <button class="cat-chip" onclick="setCat(this,'Surgical')">🔴 Surgical</button>
+        <button class="cat-chip" onclick="setCat(this,'Medications')">⚪ Medications</button>
+      </div>
+
+      <!-- ITEM SEARCH -->
+      <p class="s-label">Item <span style="color:var(--red);">*</span></p>
+      <div class="item-search-wrap" id="searchWrap">
+        <span class="item-search-icon">🔍</span>
+        <input type="text" id="itemSearch" placeholder="Search item name..."
+          oninput="onSearch(this.value)" onfocus="openDropdown()" autocomplete="off">
+        <span class="loading-dots" id="loadingDots" style="display:none;">Loading...</span>
+        <div class="item-dropdown" id="itemDropdown"></div>
+      </div>
+
+      <!-- SELECTED ITEM -->
+      <div class="selected-item-card" id="selectedCard">
+        <div>
+          <div class="sic-name" id="selectedName"></div>
+          <div class="sic-meta" id="selectedMeta"></div>
+        </div>
+        <button class="sic-clear" onclick="clearItem()" title="Change item">✕</button>
+      </div>
+
+      <!-- ADD NEW ITEM PANEL -->
+      <div class="add-new-panel" id="addNewPanel">
+        <div class="add-new-title">➕ Add New Item to Master List</div>
+        <div class="input-group">
+          <label>Item Name <span class="req">*</span></label>
+          <input type="text" id="newItemName" placeholder="e.g. Composite B1 (Ivoclar)">
+        </div>
+        <div class="row-2">
+          <div class="input-group">
+            <label>Brand</label>
+            <input type="text" id="newBrand" placeholder="e.g. Ivoclar">
+          </div>
+          <div class="input-group">
+            <label>Unit</label>
+            <select id="newUnit">
+              <option>Box</option><option>Pack</option><option>Tube</option>
+              <option>Bottle</option><option>Cartridge</option><option>Roll</option>
+              <option>Piece</option><option>Vial</option><option>Bag</option><option>Syringe</option>
+            </select>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="input-group">
+            <label>Min Level</label>
+            <input type="number" id="newMinLevel" placeholder="5" value="5" min="1">
+          </div>
+          <div class="input-group">
+            <label>Reorder Qty</label>
+            <input type="number" id="newReorderQty" placeholder="10" value="10" min="1">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Storage Location</label>
+          <input type="text" id="newLocation" placeholder="e.g. Fridge 1, Store Room A">
+        </div>
+      </div>
+
+      <!-- QUANTITY + DATE -->
+      <p class="s-label">Quantity & Date</p>
+      <div class="row-2">
+        <div class="input-group">
+          <label>Quantity <span class="req">*</span></label>
+          <input type="number" id="qty" placeholder="e.g. 5" min="1" inputmode="numeric">
+        </div>
+        <div class="input-group">
+          <label>Date</label>
+          <input type="date" id="txDate">
+        </div>
+      </div>
+
+      <!-- BATCH + EXPIRY + PRICING (shown for IN) -->
+      <div id="inFields">
+        <div class="row-2">
+          <div class="input-group">
+            <label>Batch / Lot No.</label>
+            <input type="text" id="batchNo" placeholder="e.g. LOT-44A">
+          </div>
+          <div class="input-group">
+            <label>Expiry Date</label>
+            <input type="date" id="expiryDate">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="input-group">
+            <label>Per Unit (RM)</label>
+            <input type="number" id="perUnit" placeholder="e.g. 45.50" step="0.01" min="0">
+          </div>
+          <div class="input-group">
+            <label>Supplier</label>
+            <input type="text" id="supplier" placeholder="e.g. Lalamed">
+          </div>
+        </div>
+      </div>
+
+      <!-- NURSE + NOTES -->
+      <p class="s-label">Who & Where</p>
+      <div class="row-2">
+        <div class="input-group">
+          <label>Your Name <span class="req">*</span></label>
+          <input type="text" id="nurseName" placeholder="Nurse Aida" autocomplete="name">
+        </div>
+        <div class="input-group">
+          <label>Room / Notes</label>
+          <input type="text" id="notes" placeholder="Treatment Room 2">
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submit()" disabled>Submit Entry →</button>
+      <div class="submit-hint" id="submitHint">Please select an item from the list, or tap "+ Add new item"</div>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading-view" id="loading-view">
+      <div class="spinner"></div>
+      <p style="color:var(--slate);font-size:15px;">Saving to ClinicStock...</p>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="success-view" id="success-view">
+      <div class="success-icon">✅</div>
+      <h2>Entry Saved!</h2>
+      <p>Logged in the Transaction Log. Stock count updated automatically.</p>
+      <div class="detail-card" id="detail-card"></div>
+      <button class="another-btn" onclick="resetForm()">+ Log Another</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ORDER TAB ── -->
+<div id="tab-order" class="tab-content">
+  <div class="content">
+
+    <!-- Role indicator -->
+    <div id="orderRoleBar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:8px 12px;background:var(--teal-pale);border-radius:8px;">
+      <span style="font-size:12px;color:var(--teal-dark);font-weight:700;">Mode: <span id="orderRoleLabel">Nurse</span></span>
+      <button onclick="toggleOrderRole()" style="font-size:11px;padding:4px 10px;background:var(--white);border:1px solid var(--teal);border-radius:6px;color:var(--teal-dark);cursor:pointer;">Switch</button>
+    </div>
+
+    <!-- ── NURSE VIEW: New Order + My Orders ── -->
+    <div id="orderNurseView">
+      <p class="s-label">New Order</p>
+
+      <div class="row-2">
+        <div class="input-group">
+          <label>To Location <span class="req">*</span></label>
+          <select id="orderTo">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>From <span class="req">*</span></label>
+          <select id="orderFrom">
+            <option value="Store">Store</option>
+            <option value="Ortho Store">Ortho Store</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="s-label">Add items to cart</p>
+      <div class="cat-chips">
+        <button class="cat-chip active" onclick="setOrderCat(this,'PPE')">🟢 PPE</button>
+        <button class="cat-chip" onclick="setOrderCat(this,'Restorative')">🔵 Restorative</button>
+        <button class="cat-chip" onclick="setOrderCat(this,'Endodontics')">🟣 Endo</button>
+        <button class="cat-chip" onclick="setOrderCat(this,'Disposables')">🟡 Disposables</button>
+        <button class="cat-chip" onclick="setOrderCat(this,'Cleaning & Disinfection')">🟠 Cleaning</button>
+        <button class="cat-chip" onclick="setOrderCat(this,'Surgical')">🔴 Surgical</button>
+        <button class="cat-chip" onclick="setOrderCat(this,'Medications')">⚪ Medications</button>
+      </div>
+
+      <div class="item-search-wrap" style="margin-top:8px;">
+        <span class="item-search-icon">🔍</span>
+        <input type="text" id="orderItemSearch" placeholder="Search item to add..." oninput="onOrderSearch(this.value)" onfocus="openOrderDropdown()" autocomplete="off">
+        <div class="item-dropdown" id="orderItemDropdown"></div>
+      </div>
+
+      <div class="row-2" style="margin-top:8px;">
+        <div class="input-group">
+          <label>Qty</label>
+          <input type="number" id="orderQty" placeholder="1" min="1" value="1">
+        </div>
+        <div class="input-group">
+          <label>&nbsp;</label>
+          <button onclick="addToCart()" style="width:100%;padding:11px;background:var(--teal);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;">+ Add to cart</button>
+        </div>
+      </div>
+
+      <p class="s-label" style="margin-top:18px;">🛒 Cart <span id="cartCount" style="color:var(--slate);font-weight:400;font-size:11px;"></span></p>
+      <div id="cartList" style="background:var(--off-white);border:1px solid var(--border);border-radius:10px;padding:8px;min-height:60px;">
+        <p style="text-align:center;color:var(--slate);font-size:13px;padding:14px 0;">Cart is empty. Add items above.</p>
+      </div>
+
+      <div class="input-group" style="margin-top:12px;">
+        <label>Order Notes (optional)</label>
+        <input type="text" id="orderNotes" placeholder="e.g. for RCT this afternoon">
+      </div>
+
+      <div class="input-group">
+        <label>Your Name <span class="req">*</span></label>
+        <input type="text" id="orderNurseName" placeholder="Nurse Aida">
+      </div>
+
+      <button class="submit-btn" id="orderSubmitBtn" onclick="submitOrder()" disabled>Submit Order →</button>
+      <div class="submit-hint" id="orderSubmitHint" style="display:block;">Add at least one item to the cart, then submit.</div>
+
+      <!-- My Orders -->
+      <p class="s-label" style="margin-top:24px;">📋 My Recent Orders</p>
+      <div id="myOrdersList">
+        <p style="text-align:center;color:var(--slate);font-size:13px;padding:14px 0;">Loading…</p>
+      </div>
+    </div>
+
+    <!-- ── STORE KEEPER VIEW: Pending Queue ── -->
+    <div id="orderStoreView" style="display:none;">
+      <p class="s-label">🔔 Pending Queue</p>
+      <div id="pendingOrdersList">
+        <p style="text-align:center;color:var(--slate);font-size:13px;padding:14px 0;">Loading…</p>
+      </div>
+      <button onclick="refreshPendingOrders()" style="width:100%;margin-top:10px;padding:12px;background:var(--teal-pale);color:var(--teal-dark);border:1px solid var(--teal);border-radius:8px;font-weight:700;cursor:pointer;">↻ Refresh</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── ROOM CHECK TAB ── -->
+<div id="tab-roomcheck" class="tab-content">
+  <div class="content" style="text-align:center;padding-top:60px;">
+    <div style="font-size:48px;">🔧</div>
+    <h2 style="font-size:18px;color:var(--navy);margin:14px 0 8px;">Weekly Equipment Check</h2>
+    <p style="color:var(--slate);font-size:13px;margin-bottom:24px;">Audit room equipment, mark missing/damaged items, and capture a photo for proof.</p>
+    <a id="roomCheckLink" href="clinicstock_equip_v5.html" style="display:inline-block;padding:14px 28px;background:var(--teal);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:14px;">Open Equipment Check →</a>
+    <p style="color:var(--slate);font-size:11px;margin-top:30px;">In Phase D this will be merged into the same screen.</p>
+  </div>
+</div>
+
+<!-- ── SETUP TAB ── -->
+<div id="tab-setup" class="tab-content">
+  <div class="content">
+
+    <div class="notice">
+      <strong>⚙️ One-time Setup — Manager Only</strong>
+      Deploy the Apps Script as a Web App and paste the URL below. Once saved, the item dropdown will load live from your Google Sheet.
+    </div>
+
+    <div class="setup-card">
+      <h3>Connection</h3>
+      <div class="input-group">
+        <label>Apps Script Web App URL</label>
+        <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" oninput="saveConfig()">
+      </div>
+      <div class="row-2">
+        <div class="input-group">
+          <label>Clinic Name</label>
+          <input type="text" id="clinicNameInput" placeholder="Clinic 1 — PJ" oninput="saveConfig()">
+        </div>
+        <div class="input-group">
+          <label>Your Default Name</label>
+          <input type="text" id="defaultName" placeholder="Nurse Aida" oninput="saveConfig()">
+        </div>
+      </div>
+      <button class="submit-btn" style="margin-top:0;font-size:13px;padding:12px;" onclick="testConnection()">Test Connection</button>
+    </div>
+
+    <div class="tip">
+      <strong>📋 Steps to deploy Web App:</strong><br>
+      1. Open ClinicStock Google Sheet<br>
+      2. Extensions → Apps Script → paste <code>ClinicStock_AppsScript_v3.gs</code><br>
+      3. Deploy → New Deployment → Type: Web App<br>
+      4. Execute as: <strong>Me</strong> · Access: <strong>Anyone</strong><br>
+      5. Copy the URL → paste above → Save<br>
+      6. Share this HTML file via Google Sites or WhatsApp group
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────
+let selectedType    = 'IN';
+let selectedCat     = 'PPE';
+let selectedItem    = null;   // { name, brand, unit, stock, expiry, ... }
+let isAddingNew     = false;
+let allItems        = [];     // cached from server
+let todayLog        = JSON.parse(localStorage.getItem('cs_today_log') || '[]');
+let scriptUrl       = '';
+let searchTimer     = null;
+
+// ── INIT ─────────────────────────────────────────────────────
+window.onload = () => {
+  const now = new Date();
+  document.getElementById('txDate').valueAsDate = now;
+  document.getElementById('todayPill').textContent = now.toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short'});
+
+  const cfg = JSON.parse(localStorage.getItem('cs_config') || '{}');
+  if (cfg.url)    { document.getElementById('scriptUrl').value = cfg.url; scriptUrl = cfg.url; }
+  if (cfg.clinic) { document.getElementById('clinicNameInput').value = cfg.clinic; document.getElementById('clinicLabel').textContent = cfg.clinic; }
+  if (cfg.name)   { document.getElementById('defaultName').value = cfg.name; document.getElementById('nurseName').value = cfg.name; }
+
+  // Load items in background
+  if (scriptUrl) loadItems();
+
+  // Clean history to today only
+  const todayStr = now.toDateString();
+  todayLog = todayLog.filter(h => new Date(h.ts).toDateString() === todayStr);
+  localStorage.setItem('cs_today_log', JSON.stringify(todayLog));
+
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!document.getElementById('searchWrap').contains(e.target)) closeDropdown();
+  });
+};
+
+// ── TABS ─────────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'order')     setTimeout(initOrderTab, 50);
+  if (name === 'roomcheck') setTimeout(initRoomCheckTab, 50);
+  if (name === 'setup')     setTimeout(()=>{ /* setup form already rendered */ }, 50);
+}
+
+// ── TYPE + CATEGORY ──────────────────────────────────────────
+function setType(t) {
+  selectedType = t;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.type-btn.'+t.toLowerCase()).classList.add('active');
+  document.getElementById('inFields').style.display = t === 'IN' ? '' : 'none';
+}
+
+function setCat(el, cat) {
+  selectedCat = cat;
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  clearItem();
+  allItems = []; // force reload for this category
+  loadItems();
+}
+
+
+// ── SEND TO APPS SCRIPT (form-encoded — most reliable) ───────
+async function sendToScript(payload) {
+  if (!scriptUrl) return { success: false, error: 'No script URL configured' };
+  // Encode as form data with payload key — Apps Script reads via e.parameter.payload
+  const formBody = 'payload=' + encodeURIComponent(JSON.stringify(payload));
+  const resp = await fetch(scriptUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formBody,
+  });
+  return await resp.json();
+}
+
+// ── LOAD ITEMS FROM SHEETS ───────────────────────────────────
+async function loadItems() {
+  if (!scriptUrl) return;
+  document.getElementById('loadingDots').style.display = 'inline';
+  try {
+    const data = await sendToScript({ action: 'getItems', category: selectedCat });
+    if (data.success) allItems = data.items || [];
+  } catch(e) {
+    console.warn('Could not load items:', e);
+  }
+  document.getElementById('loadingDots').style.display = 'none';
+}
+
+// ── ITEM SEARCH ──────────────────────────────────────────────
+function onSearch(val) {
+  clearTimeout(searchTimer);
+  if (!selectedItem) {
+    searchTimer = setTimeout(() => renderDropdown(val.trim()), 150);
+  }
+}
+
+function openDropdown() {
+  if (!selectedItem) renderDropdown(document.getElementById('itemSearch').value.trim());
+}
+
+function renderDropdown(query) {
+  const dd = document.getElementById('itemDropdown');
+  const q  = query.toLowerCase();
+
+  const filtered = query.length === 0
+    ? allItems.slice(0, 30)
+    : allItems.filter(it => it.name.toLowerCase().includes(q) || (it.brand||'').toLowerCase().includes(q));
+
+  let html = filtered.map(it => {
+    const stockClass = it.stock <= (it.minLevel||5) ? 'stock-low' : 'stock-ok';
+    return `<div class="dropdown-item" onclick="selectItem(${JSON.stringify(it).replace(/"/g,'&quot;')})">
+      <div>
+        <div class="d-name">${it.name}</div>
+        <div class="d-sub">${it.brand || ''} · ${it.unit || ''} · Loc: ${it.location || '—'}</div>
+      </div>
+      <div class="d-stock ${stockClass}">Qty: ${it.stock}</div>
+    </div>`;
+  }).join('');
+
+  // Empty-state when nothing matches the typed query
+  if (filtered.length === 0 && query.trim()) {
+    html += `<div class="dropdown-empty">No items match "${query}". Tap below to add it as a new item.</div>`;
+  }
+
+  // Always show Add New
+  html += `<div class="add-new-row" onclick="startAddNew('${query}')">
+    <span style="font-size:20px;">➕</span>
+    <span>${query ? `Add "${query}" as new item` : 'Add a new item'}</span>
+  </div>`;
+
+  dd.innerHTML = html;
+  dd.classList.add('open');
+}
+
+function closeDropdown() {
+  document.getElementById('itemDropdown').classList.remove('open');
+}
+
+function selectItem(item) {
+  selectedItem = item;
+  isAddingNew  = false;
+  document.getElementById('itemSearch').value = item.name;
+  document.getElementById('selectedName').textContent = item.name;
+  document.getElementById('selectedMeta').textContent =
+    `${item.brand || ''} · ${item.unit || ''} · Current stock: ${item.stock} · ${item.location || ''}`;
+  document.getElementById('selectedCard').classList.add('show');
+  document.getElementById('addNewPanel').classList.remove('show');
+  closeDropdown();
+  updateSubmitState();
+}
+
+function clearItem() {
+  selectedItem = null;
+  isAddingNew  = false;
+  document.getElementById('itemSearch').value = '';
+  document.getElementById('selectedCard').classList.remove('show');
+  document.getElementById('addNewPanel').classList.remove('show');
+  updateSubmitState();
+}
+
+function startAddNew(prefill) {
+  isAddingNew = true;
+  selectedItem = null;
+  document.getElementById('itemSearch').value = prefill || '';
+  document.getElementById('newItemName').value = prefill || '';
+  document.getElementById('addNewPanel').classList.add('show');
+  document.getElementById('selectedCard').classList.remove('show');
+  closeDropdown();
+  document.getElementById('newItemName').focus();
+  updateSubmitState();
+}
+
+// ── SUBMIT STATE ─────────────────────────────────────────────
+// Submit is disabled until the nurse has either picked an item from
+// the dropdown OR explicitly chosen "+ Add new item." Prevents the
+// silent typo bug where free-typed names were sent to the sheet and
+// silently failed the formula match (Known Issue #1).
+function updateSubmitState() {
+  const btn  = document.getElementById('submitBtn');
+  const hint = document.getElementById('submitHint');
+  if (!btn) return;
+  const ready = !!(selectedItem || isAddingNew);
+  btn.disabled = !ready;
+  if (hint) hint.style.display = ready ? 'none' : 'block';
+}
+
+// ── CONFIG ───────────────────────────────────────────────────
+function saveConfig() {
+  const url    = document.getElementById('scriptUrl').value.trim();
+  const clinic = document.getElementById('clinicNameInput').value.trim();
+  const name   = document.getElementById('defaultName').value.trim();
+  scriptUrl = url;
+  localStorage.setItem('cs_config', JSON.stringify({ url, clinic, name }));
+  if (clinic) { document.getElementById('clinicLabel').textContent = clinic; }
+  if (name)   { document.getElementById('nurseName').value = name; }
+}
+
+async function testConnection() {
+  if (!scriptUrl) { alert('Please enter your Web App URL first.'); return; }
+  try {
+    const d = await sendToScript({ action: 'getItems', category: 'PPE' });
+    alert(d.success
+      ? `✅ Connected!\nFound ${d.count} PPE items in your sheet.\n\nYour mobile form is ready.`
+      : '❌ Connected but got an error:\n' + (d.error || JSON.stringify(d)));
+  } catch(e) {
+    alert('❌ Could not connect.\n\nCheck:\n1. URL is correct\n2. Web App is deployed with Access = "Anyone"\n3. You authorised the script\n\nError: ' + e.message);
+  }
+}
+
+// ── SUBMIT ───────────────────────────────────────────────────
+async function submit() {
+  const nurseName = document.getElementById('nurseName').value.trim();
+  const qty       = document.getElementById('qty').value.trim();
+
+  // Determine item name
+  let itemName = '', isNew = false;
+  if (selectedItem) {
+    itemName = selectedItem.name;
+  } else if (isAddingNew) {
+    itemName = document.getElementById('newItemName').value.trim();
+    isNew = true;
+    if (!itemName) { alert('Please enter a name for the new item.'); return; }
+  } else {
+    // No tapped selection. Try exact-match auto-select against the
+    // loaded item list (case-insensitive) — forgiving for nurses who
+    // type the full exact name. If no exact match, refuse rather than
+    // silently submit a typo that the formula won't match.
+    const typed = document.getElementById('itemSearch').value.trim();
+    if (!typed) { alert('Please select or enter an item name.'); return; }
+    const match = allItems.find(it => (it.name||'').toLowerCase().trim() === typed.toLowerCase());
+    if (match) {
+      selectItem(match);
+      itemName = match.name;
+    } else {
+      alert(`"${typed}" is not in the master list.\n\nTap an item from the dropdown, or use "+ Add new item" to create it.`);
+      return;
+    }
+  }
+
+  if (!qty || !nurseName) { alert('Please fill in Quantity and Your Name.'); return; }
+
+  // Show loading
+  document.getElementById('form-view').style.display = 'none';
+  document.getElementById('loading-view').style.display = 'block';
+
+  const cfg = JSON.parse(localStorage.getItem('cs_config') || '{}');
+
+  // If adding new item, create it in sheet first
+  if (isNew && scriptUrl) {
+    try {
+      await sendToScript({
+          action:      'addNewItem',
+          category:    selectedCat,
+          itemName,
+          brand:       document.getElementById('newBrand').value.trim(),
+          unit:        document.getElementById('newUnit').value,
+          minLevel:    document.getElementById('newMinLevel').value,
+          reorderQty:  document.getElementById('newReorderQty').value,
+          location:    document.getElementById('newLocation').value.trim(),
+          openingStock: parseInt(qty) || 0,
+          nurseName,
+      });
+    } catch(e) { console.warn('Add new item error:', e); }
+  }
+
+  // Now submit the transaction
+  const unit = selectedItem ? selectedItem.unit : (isNew ? document.getElementById('newUnit').value : 'Unit');
+  const perUnit  = parseFloat(document.getElementById('perUnit').value) || '';
+  const supplier = document.getElementById('supplier').value.trim();
+  const entry = {
+    action:     'stockEntry',
+    itemName,
+    category:   selectedCat,
+    type:       selectedType,
+    date:       document.getElementById('txDate').value,
+    qty,
+    unit,
+    batchNo:    document.getElementById('batchNo').value.trim(),
+    expiryDate: document.getElementById('expiryDate').value,
+    perUnit,
+    supplier,
+    nurseName,
+    notes:      document.getElementById('notes').value.trim() + (cfg.clinic ? ' [' + cfg.clinic + ']' : ''),
+  };
+
+  // Save to local log
+  todayLog.unshift({ ...entry, ts: Date.now() });
+  localStorage.setItem('cs_today_log', JSON.stringify(todayLog));
+
+  let resultOk = true;
+  let resultError = null;
+  if (scriptUrl && scriptUrl.startsWith('https://script.google.com')) {
+    try {
+      const result = await sendToScript(entry);
+      if (!result.success) {
+        resultOk = false;
+        resultError = result.error || 'Apps Script returned success:false with no error message.';
+        console.warn('Submit warning:', resultError);
+      }
+    } catch(e) {
+      resultOk = false;
+      resultError = e.message || 'Network error reaching Apps Script.';
+      console.warn('Submit error:', e);
+    }
+  } else {
+    await new Promise(r => setTimeout(r, 600));
+    // Allowed offline path — still surfaces a hint
+    resultError = 'Offline — entry saved locally only, NOT in Google Sheet.';
+    resultOk = false;
+  }
+
+  if (resultOk) {
+    showSuccess(entry, isNew);
+  } else {
+    showError(entry, resultError);
+  }
+}
+
+function showError(entry, errorMsg) {
+  document.getElementById('loading-view').style.display = 'none';
+  document.getElementById('success-view').style.display = 'block';
+  const sv = document.getElementById('success-view');
+  // Replace icon and heading with error-styled versions
+  const icon = sv.querySelector('.success-icon');
+  if (icon) {
+    icon.textContent = '⚠️';
+    icon.style.background = 'var(--red-light, #FEE2E2)';
+    icon.style.borderColor = 'var(--red, #E53E3E)';
+  }
+  const h2 = sv.querySelector('h2');
+  if (h2) h2.textContent = 'Not Saved';
+  const p = sv.querySelector('p');
+  if (p) {
+    p.textContent = errorMsg;
+    p.style.color = 'var(--red, #E53E3E)';
+    p.style.fontWeight = '600';
+  }
+  document.getElementById('detail-card').innerHTML = [
+    ['Movement', entry.type],
+    ['Item', entry.itemName],
+    ['Quantity', `${entry.qty} ${entry.unit||''}`],
+    ['Issue', `<span style="color:#E53E3E;">${errorMsg}</span>`],
+    ['What to do', 'Check Apps Script Executions log, then tap "Try Again" to resubmit.'],
+  ].map(([k,v]) => `<div class="detail-row"><span>${k}</span><span>${v}</span></div>`).join('');
+  // Reset button label to "Try Again" so the action is obvious
+  const btn = sv.querySelector('.another-btn');
+  if (btn) btn.textContent = '↺ Try Again';
+}
+
+function showSuccess(entry, isNew) {
+  document.getElementById('loading-view').style.display = 'none';
+  const sv = document.getElementById('success-view');
+  sv.style.display = 'block';
+  // Reset to success styling in case the previous attempt rendered as error
+  const icon = sv.querySelector('.success-icon');
+  if (icon) {
+    icon.textContent = '✅';
+    icon.style.background = '';
+    icon.style.borderColor = '';
+  }
+  const h2 = sv.querySelector('h2');
+  if (h2) h2.textContent = 'Entry Saved!';
+  const p = sv.querySelector('p');
+  if (p) {
+    p.textContent = 'Logged in the Transaction Log. Stock count updated automatically.';
+    p.style.color = '';
+    p.style.fontWeight = '';
+  }
+  const btn = sv.querySelector('.another-btn');
+  if (btn) btn.textContent = '+ Log Another';
+  const typeHtml = entry.type === 'IN'
+    ? '<span style="color:#059669;font-weight:800;">📥 IN</span>'
+    : '<span style="color:#E53E3E;font-weight:800;">📤 OUT</span>';
+  document.getElementById('detail-card').innerHTML = [
+    ['Movement', typeHtml],
+    ['Item', entry.itemName + (isNew ? ' <span style="color:#028090;font-size:11px;">(new item added to master list)</span>' : '')],
+    ['Category', entry.category],
+    ['Quantity', `${entry.qty} ${entry.unit}`],
+    ['Date', entry.date],
+    entry.batchNo ? ['Batch', entry.batchNo] : null,
+    entry.expiryDate ? ['Expiry', entry.expiryDate] : null,
+    entry.perUnit ? ['Per Unit', `RM ${parseFloat(entry.perUnit).toFixed(2)}`] : null,
+    entry.supplier ? ['Supplier', entry.supplier] : null,
+    ['By', entry.nurseName],
+  ].filter(Boolean).map(([k,v]) => `<div class="detail-row"><span>${k}</span><span>${v}</span></div>`).join('');
+}
+
+function resetForm() {
+  document.getElementById('success-view').style.display = 'none';
+  document.getElementById('form-view').style.display = 'block';
+  clearItem();
+  document.getElementById('qty').value = '';
+  document.getElementById('batchNo').value = '';
+  document.getElementById('expiryDate').value = '';
+  document.getElementById('perUnit').value = '';
+  document.getElementById('supplier').value = '';
+  document.getElementById('notes').value = '';
+  // Reload items so new item appears in dropdown
+  allItems = [];
+  if (scriptUrl) loadItems();
+  window.scrollTo(0,0);
+}
+
+// ── HISTORY ──────────────────────────────────────────────────
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!todayLog.length) {
+    list.innerHTML = '<p style="color:var(--slate);font-size:13px;text-align:center;padding:40px 0;">Nothing logged yet today.</p>';
+    return;
+  }
+  list.innerHTML = todayLog.map(h => `
+    <div class="history-item">
+      <div>
+        <div class="h-name">${h.itemName}</div>
+        <div class="h-meta">${h.qty} ${h.unit||''} · ${h.category} · ${h.nurseName}</div>
+        <div class="h-meta">${new Date(h.ts).toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <span class="h-badge ${h.type.toLowerCase()}">${h.type==='IN'?'📥 IN':'📤 OUT'}</span>
+    </div>
+  `).join('');
+}
+// ============================================================
+//  PHASE B SESSION 1 — ORDER TAB
+// ============================================================
+let orderRole = localStorage.getItem('cs_role') || 'nurse';
+let orderCart = []; // {itemName, category, qty, unit}
+let orderItems = []; // loaded from getItems
+let orderSelectedItem = null;
+let orderSelectedCat = 'PPE';
+let orderLocations = [];
+
+function initOrderTab() {
+  applyOrderRole();
+  loadOrderLocations();
+  loadOrderItems();
+  loadMyOrders();
+}
+
+function applyOrderRole() {
+  document.getElementById('orderRoleLabel').textContent =
+    orderRole === 'store' ? 'Store Keeper' : (orderRole === 'manager' ? 'Manager' : 'Nurse');
+  document.getElementById('orderNurseView').style.display = orderRole === 'nurse' ? 'block' : 'none';
+  document.getElementById('orderStoreView').style.display = (orderRole === 'store' || orderRole === 'manager') ? 'block' : 'none';
+  if (orderRole === 'store' || orderRole === 'manager') refreshPendingOrders();
+}
+
+function toggleOrderRole() {
+  const next = orderRole === 'nurse' ? 'store' : (orderRole === 'store' ? 'manager' : 'nurse');
+  orderRole = next;
+  localStorage.setItem('cs_role', next);
+  applyOrderRole();
+}
+
+async function loadOrderLocations() {
+  if (!scriptUrl) return;
+  try {
+    const r = await sendToScript({ action: 'getLocations' });
+    if (r.success && r.locations) {
+      orderLocations = r.locations;
+      const toSel = document.getElementById('orderTo');
+      const fromSel = document.getElementById('orderFrom');
+      const treatments = orderLocations.filter(l => l.type === 'Treatment Room' || l.type === 'Sterilization' || l.type === 'Mobile Tray');
+      const stores = orderLocations.filter(l => l.type === 'Store' || l.type === 'Mobile Tray');
+      toSel.innerHTML = treatments.map(l => `<option value="${l.name}">${l.name}</option>`).join('') || '<option>—</option>';
+      fromSel.innerHTML = stores.map(l => `<option value="${l.name}">${l.name}</option>`).join('') || '<option>Store</option>';
+      // Pre-fill from saved default
+      const savedTo = localStorage.getItem('cs_default_room');
+      if (savedTo) toSel.value = savedTo;
+    }
+  } catch(e) { console.warn('loadOrderLocations:', e); }
+}
+
+function setOrderCat(el, cat) {
+  orderSelectedCat = cat;
+  document.querySelectorAll('#tab-order .cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  loadOrderItems();
+}
+
+async function loadOrderItems() {
+  if (!scriptUrl) return;
+  try {
+    const r = await sendToScript({ action: 'getItems', category: orderSelectedCat });
+    if (r.success) orderItems = r.items || [];
+  } catch(e) {}
+}
+
+function onOrderSearch(val) {
+  renderOrderDropdown(val.trim());
+}
+
+function openOrderDropdown() {
+  renderOrderDropdown(document.getElementById('orderItemSearch').value.trim());
+}
+
+function renderOrderDropdown(query) {
+  const dd = document.getElementById('orderItemDropdown');
+  const q = query.toLowerCase();
+  const filtered = q
+    ? orderItems.filter(it => (it.name||'').toLowerCase().includes(q) || (it.brand||'').toLowerCase().includes(q))
+    : orderItems.slice(0, 30);
+  if (filtered.length === 0) {
+    dd.innerHTML = `<div class="dropdown-empty">No items match "${query}".</div>`;
+  } else {
+    dd.innerHTML = filtered.map(it =>
+      `<div class="dropdown-item" onclick='pickOrderItem(${JSON.stringify(it).replace(/"/g,"&quot;")})'>
+        <div><div class="d-name">${it.name}</div>
+        <div class="d-sub">${it.brand||''} · Stock: ${it.stock||0}</div></div>
+      </div>`
+    ).join('');
+  }
+  dd.classList.add('open');
+}
+
+function pickOrderItem(it) {
+  orderSelectedItem = it;
+  document.getElementById('orderItemSearch').value = it.name;
+  document.getElementById('orderItemDropdown').classList.remove('open');
+}
+
+function addToCart() {
+  if (!orderSelectedItem) { alert('Pick an item from the dropdown first.'); return; }
+  const qty = parseInt(document.getElementById('orderQty').value) || 1;
+  if (qty < 1) return;
+  orderCart.push({
+    itemName: orderSelectedItem.name,
+    category: orderSelectedCat,
+    qty,
+    unit: orderSelectedItem.unit || 'unit',
+  });
+  // Reset picker
+  orderSelectedItem = null;
+  document.getElementById('orderItemSearch').value = '';
+  document.getElementById('orderQty').value = '1';
+  document.getElementById('orderItemDropdown').classList.remove('open');
+  renderCart();
+}
+
+function removeFromCart(idx) {
+  orderCart.splice(idx, 1);
+  renderCart();
+}
+
+function renderCart() {
+  const list = document.getElementById('cartList');
+  document.getElementById('cartCount').textContent = orderCart.length ? `(${orderCart.length} items)` : '';
+  if (!orderCart.length) {
+    list.innerHTML = '<p style="text-align:center;color:var(--slate);font-size:13px;padding:14px 0;">Cart is empty. Add items above.</p>';
+  } else {
+    list.innerHTML = orderCart.map((it, i) =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:white;border-radius:6px;margin-bottom:5px;border:1px solid var(--border);">
+        <div><div style="font-size:13px;font-weight:700;color:var(--navy);">${it.qty} × ${it.itemName}</div>
+        <div style="font-size:11px;color:var(--slate);">${it.category}</div></div>
+        <button onclick="removeFromCart(${i})" style="background:transparent;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:4px 10px;">✕</button>
+      </div>`).join('');
+  }
+  document.getElementById('orderSubmitBtn').disabled = orderCart.length === 0;
+  document.getElementById('orderSubmitHint').style.display = orderCart.length === 0 ? 'block' : 'none';
+}
+
+async function submitOrder() {
+  if (!orderCart.length) return;
+  const nurseName = document.getElementById('orderNurseName').value.trim();
+  if (!nurseName) { alert('Please enter your name.'); return; }
+  const toLoc = document.getElementById('orderTo').value;
+  const fromLoc = document.getElementById('orderFrom').value;
+  if (!toLoc) { alert('Pick a To location.'); return; }
+  // Save default room
+  localStorage.setItem('cs_default_room', toLoc);
+
+  const btn = document.getElementById('orderSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    const r = await sendToScript({
+      action: 'submitOrder',
+      fromLocation: fromLoc,
+      toLocation: toLoc,
+      nurseName,
+      clinicName: (JSON.parse(localStorage.getItem('cs_config')||'{}').clinic) || '',
+      notes: document.getElementById('orderNotes').value.trim(),
+      items: orderCart,
+    });
+    if (r.success) {
+      alert(`✅ ${r.message || 'Order submitted'}\n\nOrder ID: ${r.orderId}`);
+      orderCart = [];
+      renderCart();
+      document.getElementById('orderNotes').value = '';
+      loadMyOrders();
+    } else {
+      alert(`❌ Submit failed: ${r.error || 'Unknown error'}`);
+    }
+  } catch(e) {
+    alert(`❌ Network error: ${e.message}`);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Submit Order →';
+}
+
+async function loadMyOrders() {
+  if (orderRole !== 'nurse' || !scriptUrl) return;
+  const nurseName = document.getElementById('orderNurseName').value.trim();
+  if (!nurseName) { document.getElementById('myOrdersList').innerHTML = '<p style="text-align:center;color:var(--slate);font-size:12px;padding:8px;">Enter your name above to load your orders.</p>'; return; }
+  try {
+    const r = await sendToScript({ action: 'getMyOrders', nurseName });
+    renderOrdersList(document.getElementById('myOrdersList'), r.orders || [], 'nurse');
+  } catch(e) {}
+}
+
+async function refreshPendingOrders() {
+  if (!scriptUrl) return;
+  document.getElementById('pendingOrdersList').innerHTML = '<p style="text-align:center;color:var(--slate);font-size:12px;padding:14px;">Loading…</p>';
+  try {
+    const r = await sendToScript({ action: 'getPendingOrders', role: orderRole });
+    renderOrdersList(document.getElementById('pendingOrdersList'), r.orders || [], orderRole);
+  } catch(e) {
+    document.getElementById('pendingOrdersList').innerHTML = `<p style="color:var(--red);font-size:12px;padding:14px;">Error: ${e.message}</p>`;
+  }
+}
+
+function renderOrdersList(container, orders, role) {
+  if (!orders.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--slate);font-size:13px;padding:14px 0;">No orders yet.</p>';
+    return;
+  }
+  container.innerHTML = orders.slice(0, 20).map(o => {
+    const itemsHtml = o.items.map(it => {
+      const ic = { 'Pending':'⏳', 'Awaiting Approval':'⚠️', 'Fulfilled':'✅', 'Partial':'🟡', 'Unavailable':'❌', 'Cancelled':'🚫', 'Received':'✅' }[it.status] || '•';
+      const actions = (role === 'store' || role === 'manager') && (it.status === 'Pending' || it.status === 'Awaiting Approval')
+        ? `<div style="display:flex;gap:4px;margin-top:4px;">
+            <button onclick="fulfillItem('${o.orderId}',${it.row},'fulfill')" style="flex:1;padding:6px;background:var(--green);color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;">✅ Provide</button>
+            <button onclick="markUnavailable('${o.orderId}',${it.row})" style="flex:1;padding:6px;background:var(--red);color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;">❌ Unavailable</button>
+          </div>` : '';
+      const receiptBtn = role === 'nurse' && (it.status === 'Fulfilled' || it.status === 'Partial')
+        ? `<button onclick="confirmReceipt('${o.orderId}')" style="margin-top:4px;padding:6px;background:var(--teal);color:white;border:none;border-radius:5px;font-size:11px;cursor:pointer;width:100%;">✓ Confirm Received</button>`
+        : '';
+      return `<div style="padding:8px;background:white;border-radius:6px;margin:4px 0;border:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--navy);"><b>${ic} ${it.qty} × ${it.itemName}</b> <span style="color:var(--slate);font-size:10px;">${it.status}</span></div>
+        ${actions}${receiptBtn}
+      </div>`;
+    }).join('');
+    return `<div style="padding:10px;background:var(--off-white);border-radius:8px;margin-bottom:8px;border-left:3px solid var(--teal);">
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--navy);">
+        <span>${o.orderId}</span>
+        <span>${o.from || ''} → ${o.to || ''}</span>
+      </div>
+      <div style="font-size:11px;color:var(--slate);margin:2px 0 6px;">${o.nurseName||''} · ${o.date ? new Date(o.date).toLocaleString('en-MY') : ''}</div>
+      ${itemsHtml}
+    </div>`;
+  }).join('');
+}
+
+async function fulfillItem(orderId, row, action) {
+  const r = await sendToScript({
+    action: 'fulfillOrder',
+    orderId,
+    actor: localStorage.getItem('cs_keeper_name') || 'Store',
+    lineItems: [{ row, action }],
+  });
+  if (r.success) refreshPendingOrders();
+}
+
+async function markUnavailable(orderId, row) {
+  const reason = prompt('Reason for unavailable:', 'Out of stock');
+  if (!reason) return;
+  const r = await sendToScript({
+    action: 'fulfillOrder',
+    orderId,
+    actor: localStorage.getItem('cs_keeper_name') || 'Store',
+    lineItems: [{ row, action: 'unavailable', reason }],
+  });
+  if (r.success) refreshPendingOrders();
+}
+
+async function confirmReceipt(orderId) {
+  if (!confirm(`Confirm you've received all items for ${orderId}?`)) return;
+  const nurseName = document.getElementById('orderNurseName').value.trim();
+  const r = await sendToScript({ action: 'confirmReceipt', orderId, nurseName });
+  if (r.success) loadMyOrders();
+}
+
+// ============================================================
+//  ROOM CHECK TAB
+// ============================================================
+function initRoomCheckTab() {
+  // Try to detect a sibling URL (mobile and equip live in same hosting)
+  // No-op for now — link is hardcoded relative
+}
+
+</script>
+</body>
+</html>

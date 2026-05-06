@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ClinicStock — Equipment Check</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --navy:       #1B2A3B;
+    --teal:       #028090;
+    --teal-dark:  #015F6A;
+    --teal-pale:  #E8F6F8;
+    --teal-light: #B2DFE4;
+    --white:      #FFFFFF;
+    --off:        #F0F4F8;
+    --border:     #CBD5E1;
+    --text:       #1E293B;
+    --slate:      #64748B;
+    --green:      #059669;
+    --green-pale: #F0FDF4;
+    --amber:      #D97706;
+    --amber-pale: #FFFBEB;
+    --red:        #DC2626;
+    --red-pale:   #FFF5F5;
+  }
+  * { box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent; }
+  body { font-family:'Outfit',sans-serif;background:var(--navy);min-height:100vh;color:var(--text); }
+
+  /* HEADER */
+  .header { padding:22px 20px 0;background:var(--navy); }
+  .header-row { display:flex;align-items:center;justify-content:space-between;padding-bottom:18px; }
+  .app-logo { display:flex;align-items:center;gap:12px; }
+  .app-icon { width:44px;height:44px;background:var(--teal);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px; }
+  .app-logo h1 { font-size:19px;font-weight:900;color:var(--white); }
+  .app-logo p  { font-size:11px;color:var(--teal-light);margin-top:1px; }
+  .week-badge { background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:var(--teal-light);font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px; }
+
+  /* PROGRESS */
+  .progress-wrap { margin-bottom:0; }
+  .progress-row { display:flex;justify-content:space-between;align-items:center;margin-bottom:6px; }
+  .progress-row span { font-size:11px;color:var(--teal-light); }
+  .progress-bar-bg { background:rgba(255,255,255,0.1);border-radius:6px;height:6px;overflow:hidden;margin-bottom:4px; }
+  .progress-bar-fill { height:100%;background:var(--teal);border-radius:6px;transition:width 0.4s ease; }
+  .status-summary { display:flex;gap:12px;padding:8px 0 14px; }
+  .ss-chip { font-size:10px;font-weight:700;color:rgba(255,255,255,0.6); }
+  .ss-chip span { font-weight:900;color:var(--white); }
+
+  /* MAIN */
+  .main { background:var(--off);min-height:calc(100vh - 200px);border-radius:20px 20px 0 0;padding:0 0 100px; }
+
+  /* NURSE BAR */
+  .nurse-bar { padding:14px 16px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px; }
+  .nurse-bar label { font-size:12px;font-weight:700;color:var(--slate);white-space:nowrap; }
+  .nurse-bar input { flex:1;border:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--navy);background:transparent; }
+  .nurse-bar input:focus { outline:none; }
+
+  /* ROOM TABS */
+  .room-tabs { display:flex;overflow-x:auto;gap:0;background:var(--white);border-bottom:2px solid var(--border);scrollbar-width:none;padding:0 12px; }
+  .room-tabs::-webkit-scrollbar { display:none; }
+  .room-tab { flex-shrink:0;padding:12px 16px;font-family:inherit;font-size:13px;font-weight:700;color:var(--slate);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;white-space:nowrap;transition:all 0.15s; }
+  .room-tab.active { color:var(--teal);border-bottom-color:var(--teal); }
+
+  /* SECTION */
+  .section { padding:14px 16px 0; }
+  .section-hdr { font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--slate);text-transform:uppercase;margin-bottom:10px; }
+
+  /* CHECKLIST */
+  .checklist { display:flex;flex-direction:column;gap:8px;padding:0 16px 16px; }
+
+  /* CHECK CARD — check type */
+  .check-card {
+    background:var(--white);border-radius:14px;border:2px solid var(--border);
+    overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;
+  }
+  .check-card.status-ok      { border-color:var(--green); }
+  .check-card.status-damaged { border-color:var(--red);   }
+  .check-card.status-missing { border-color:var(--amber); }
+  .check-card.status-short   { border-color:var(--amber); }
+
+  .card-main { display:flex;align-items:center;padding:14px 16px;gap:12px;cursor:pointer; }
+  .card-icon { font-size:26px;flex-shrink:0; }
+  .card-info { flex:1; }
+  .card-name { font-size:14px;font-weight:700;color:var(--navy); }
+  .card-sub  { font-size:11px;color:var(--slate);margin-top:2px; }
+
+  /* STATUS BADGE */
+  .status-badge { padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;flex-shrink:0; }
+  .badge-pending { background:var(--off);color:var(--slate); }
+  .badge-ok      { background:var(--green-pale);color:var(--green); }
+  .badge-damaged { background:var(--red-pale);color:var(--red); }
+  .badge-missing { background:var(--amber-pale);color:var(--amber); }
+  .badge-short   { background:var(--amber-pale);color:var(--amber); }
+
+  /* CHECK TYPE — buttons */
+  .action-row { display:none;padding:0 16px 14px;gap:8px; }
+  .check-card.expanded .action-row { display:flex; }
+  .action-btn { flex:1;padding:10px 6px;border:2px solid var(--border);border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;background:var(--white);transition:all 0.15s;text-align:center; }
+  .action-btn.sel-ok      { border-color:var(--green);background:var(--green-pale);color:var(--green); }
+  .action-btn.sel-damaged { border-color:var(--red);background:var(--red-pale);color:var(--red); }
+  .action-btn.sel-missing { border-color:var(--amber);background:var(--amber-pale);color:var(--amber); }
+
+  /* COUNT TYPE */
+  .count-row { display:none;padding:0 16px 14px;align-items:center;gap:12px; }
+  .check-card.expanded .count-row { display:flex; }
+  .count-label { font-size:12px;color:var(--slate);flex-shrink:0; }
+  .count-expected { font-size:13px;font-weight:700;color:var(--navy);flex-shrink:0; }
+  .count-controls { display:flex;align-items:center;gap:8px;flex:1;justify-content:center; }
+  .count-btn { width:40px;height:40px;border-radius:50%;border:2px solid var(--border);background:var(--white);font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s; }
+  .count-btn:active { transform:scale(0.9); }
+  .count-btn.minus { border-color:var(--red);color:var(--red); }
+  .count-btn.plus  { border-color:var(--green);color:var(--green); }
+  .count-display { font-size:28px;font-weight:900;color:var(--navy);min-width:40px;text-align:center; }
+  .count-status { font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0; }
+
+  /* CONFIRM ALL PRESENT — primary action for count items */
+  .confirm-row { padding:10px 16px 0; }
+  .confirm-btn { width:100%;padding:12px;background:var(--teal);color:var(--white);border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px; }
+  .confirm-btn:active { background:var(--teal-dark);transform:scale(0.98); }
+  .check-card.status-ok .confirm-btn { background:var(--green); }
+  .confirm-btn .qty { font-family:'DM Mono',monospace;opacity:0.85; }
+
+  /* NOTES + PHOTO (for issues) */
+  .issue-row { display:none;padding:0 16px 14px;flex-direction:column;gap:8px; }
+  .check-card.has-issue .issue-row { display:flex; }
+  .note-input { width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--text);background:var(--off);resize:none;height:68px; }
+  .note-input:focus { outline:none;border-color:var(--teal);background:var(--white); }
+  .photo-row { display:flex;gap:10px;align-items:center; }
+  .cam-btn { flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--navy);color:var(--white);border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer; }
+  .cam-input { display:none; }
+  .thumb { width:52px;height:52px;border-radius:8px;object-fit:cover;border:2px solid var(--teal);display:none; }
+  .thumb.show { display:block; }
+
+  /* SUBMIT FOOTER */
+  .submit-footer { position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);padding:14px 16px;z-index:50; }
+  .submit-btn { width:100%;padding:16px;background:var(--teal);color:var(--white);border:none;border-radius:12px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(2,128,144,0.3);transition:all 0.2s; }
+  .submit-btn:disabled { background:var(--slate);box-shadow:none; }
+  .submit-sub { font-size:11px;color:var(--slate);text-align:center;margin-top:6px; }
+
+  /* LOADING STATE */
+  .check-card.loading { opacity:0.6;pointer-events:none; }
+
+  /* SUCCESS OVERLAY */
+  .overlay { display:none;position:fixed;inset:0;background:rgba(27,42,59,0.96);z-index:999;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px; }
+  .overlay.show { display:flex;animation:fadeIn 0.3s; }
+  .ov-icon { font-size:70px;margin-bottom:16px; }
+  .overlay h2 { font-size:24px;font-weight:900;color:var(--white); }
+  .overlay p  { color:var(--teal-light);font-size:14px;margin-top:8px;max-width:320px; }
+  .ov-issues { background:rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:13px;color:var(--white); }
+  .restart-btn { margin-top:20px;background:var(--teal);color:var(--white);border:none;padding:14px 36px;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer; }
+
+  /* LOADING SCREEN */
+  .load-screen { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:16px; }
+  .spinner { width:44px;height:44px;border:4px solid var(--teal-pale);border-top-color:var(--teal);border-radius:50%;animation:spin 0.8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg);} }
+  @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+</style>
+</head>
+<body>
+
+<!-- SUCCESS OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="ov-icon" id="ovIcon">✅</div>
+  <h2 id="ovTitle">Check Submitted!</h2>
+  <p id="ovMsg">Equipment check logged in ClinicStock.</p>
+  <div class="ov-issues" id="ovIssues" style="display:none;"></div>
+  <button class="restart-btn" onclick="restart()">Check Another Room</button>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <div class="app-logo">
+      <div class="app-icon">🔧</div>
+      <div>
+        <h1>Equipment Check</h1>
+        <p>Weekly room inspection</p>
+      </div>
+    </div>
+    <div class="week-badge" id="weekBadge"></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-row">
+      <span id="progressLabel">0 of 0 checked</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="status-summary">
+      <div class="ss-chip">✅ OK: <span id="countOk">0</span></div>
+      <div class="ss-chip">⚠️ Issues: <span id="countIssues">0</span></div>
+      <div class="ss-chip">⏳ Pending: <span id="countPending">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main">
+  <div class="load-screen" id="loadScreen">
+    <div class="spinner"></div>
+    <p style="color:var(--slate);font-size:14px;">Loading checklist...</p>
+  </div>
+</div>
+
+<!-- SUBMIT FOOTER -->
+<div class="submit-footer">
+  <button class="submit-btn" id="submitBtn" onclick="submitAll()">Submit Room Check →</button>
+  <div class="submit-sub" id="submitSub">Loading...</div>
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────
+let rooms         = [];       // [{name, items:[{name,icon,type,expectedCount}]}]
+let selectedRoom  = null;
+let results       = {};       // { itemIndex: { status, actual, note, photo } }
+let photoData     = {};
+let gpsCoords     = null;
+let scriptUrl     = '';
+let nurseName     = '';
+
+// ── INIT ─────────────────────────────────────────────────────
+window.onload = async () => {
+  const now = new Date();
+  document.getElementById('weekBadge').textContent = `Week ${getWeek(now)} · ${now.toLocaleDateString('en-MY',{day:'numeric',month:'short'})}`;
+
+  const cfg = JSON.parse(localStorage.getItem('cs_config') || '{}');
+  scriptUrl  = cfg.url  || '';
+  nurseName  = cfg.name || '';
+
+  getGPS();
+
+  if (scriptUrl) {
+    await loadRoomsFromSheet();
+  } else {
+    loadFallbackRooms();
+  }
+};
+
+function getWeek(d) {
+  const j = new Date(d.getFullYear(),0,1);
+  return Math.ceil((((d-j)/86400000)+j.getDay()+1)/7);
+}
+
+// ── GPS ──────────────────────────────────────────────────────
+function getGPS() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    gpsCoords = `${pos.coords.latitude.toFixed(5)},${pos.coords.longitude.toFixed(5)}`;
+  });
+}
+
+
+// ── SEND TO APPS SCRIPT (form-encoded — most reliable) ───────
+async function sendToScript(payload) {
+  if (!scriptUrl) return { success: false, error: 'No script URL configured' };
+  const formBody = 'payload=' + encodeURIComponent(JSON.stringify(payload));
+  const resp = await fetch(scriptUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formBody,
+  });
+  return await resp.json();
+}
+
+// ── LOAD ROOMS FROM SHEET ────────────────────────────────────
+async function loadRoomsFromSheet() {
+  try {
+    const data = await sendToScript({ action: 'getRooms' });
+    if (data.success && data.rooms.length > 0) {
+      rooms = data.rooms;
+      buildUI();
+      return;
+    }
+  } catch(e) { console.warn('Could not load rooms from sheet:', e); }
+  loadFallbackRooms();
+}
+
+// ── FALLBACK ROOMS (used if no script URL or can't connect) ──
+function loadFallbackRooms() {
+  rooms = [
+    { name: "Treatment Room 1", items: [
+      { name:"Dental Chair",               icon:"🦷", type:"check", expectedCount:1 },
+      { name:"Operating Light",            icon:"💡", type:"check", expectedCount:1 },
+      { name:"Dental Unit (Handpiece)",    icon:"💧", type:"check", expectedCount:1 },
+      { name:"Curing Light",               icon:"🔦", type:"check", expectedCount:1 },
+      { name:"Examination Trays",          icon:"🗂️", type:"count", expectedCount:4 },
+      { name:"Mouth Mirror (plastic)",     icon:"🪞", type:"count", expectedCount:4 },
+      { name:"Probe (CPITN/Williams)",     icon:"🔍", type:"count", expectedCount:4 },
+      { name:"Tweezers / College Pliers",  icon:"✂️", type:"count", expectedCount:4 },
+      { name:"Spoon Excavator",            icon:"🥄", type:"count", expectedCount:6 },
+      { name:"Gallipot / Dappen Dish",     icon:"🥣", type:"count", expectedCount:4 },
+      { name:"Sectional Matrix (Palodent)",icon:"🔩", type:"count", expectedCount:10 },
+      { name:"HVE Tips",                   icon:"🌪️", type:"count", expectedCount:4 },
+      { name:"Blood Pressure Monitor",     icon:"💉", type:"check", expectedCount:1 },
+    ]},
+    { name: "Treatment Room 2", items: [
+      { name:"Dental Chair",               icon:"🦷", type:"check", expectedCount:1 },
+      { name:"Operating Light",            icon:"💡", type:"check", expectedCount:1 },
+      { name:"Curing Light",               icon:"🔦", type:"check", expectedCount:1 },
+      { name:"Examination Trays",          icon:"🗂️", type:"count", expectedCount:4 },
+      { name:"Mouth Mirror (plastic)",     icon:"🪞", type:"count", expectedCount:4 },
+      { name:"Spoon Excavator",            icon:"🥄", type:"count", expectedCount:6 },
+      { name:"Gallipot / Dappen Dish",     icon:"🥣", type:"count", expectedCount:4 },
+      { name:"Sectional Matrix",           icon:"🔩", type:"count", expectedCount:10 },
+      { name:"Apex Locator",               icon:"📡", type:"check", expectedCount:1 },
+    ]},
+    { name: "Sterilisation Room", items: [
+      { name:"Autoclave",                  icon:"🫙", type:"check", expectedCount:1 },
+      { name:"Ultrasonic Cleaner",         icon:"🔊", type:"check", expectedCount:1 },
+      { name:"Instrument Cassettes",       icon:"📋", type:"count", expectedCount:8 },
+      { name:"Sterilisation Pouches",      icon:"📦", type:"count", expectedCount:50 },
+      { name:"Distilled Water Container",  icon:"💧", type:"check", expectedCount:1 },
+    ]},
+    { name: "Store Room", items: [
+      { name:"Medication Fridge",          icon:"❄️", type:"check", expectedCount:1 },
+      { name:"First Aid Kit",              icon:"🩹", type:"check", expectedCount:1 },
+      { name:"Emergency Kit",              icon:"🚨", type:"check", expectedCount:1 },
+      { name:"Fire Extinguisher",          icon:"🧯", type:"check", expectedCount:1 },
+    ]},
+  ];
+  buildUI();
+}
+
+// ── BUILD UI ─────────────────────────────────────────────────
+function buildUI() {
+  selectedRoom = rooms[0];
+  results = {}; photoData = {};
+  const main = document.getElementById('main');
+
+  const nurseVal = nurseName || '';
+  main.innerHTML = `
+    <div class="nurse-bar">
+      <label>👤 Checked by:</label>
+      <input type="text" id="nurseInput" placeholder="Your name" value="${nurseVal}" oninput="nurseName=this.value">
+    </div>
+    <div class="room-tabs" id="roomTabs">${rooms.map((r,i)=>`
+      <button class="room-tab${i===0?' active':''}" onclick="switchRoom(${i},this)">${r.name}</button>
+    `).join('')}</div>
+    <div id="checklist-area"></div>
+  `;
+
+  renderChecklist();
+}
+
+function switchRoom(idx, btn) {
+  selectedRoom = rooms[idx];
+  results = {}; photoData = {};
+  document.querySelectorAll('.room-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChecklist();
+  window.scrollTo(0,0);
+}
+
+// ── RENDER CHECKLIST ─────────────────────────────────────────
+function renderChecklist() {
+  const area = document.getElementById('checklist-area');
+  const items = selectedRoom.items;
+
+  area.innerHTML = `<div class="checklist">${items.map((item,i) => renderCard(item,i)).join('')}</div>`;
+  updateProgress();
+}
+
+function renderCard(item, idx) {
+  if (item.type === 'count') {
+    return `
+    <div class="check-card" id="card-${idx}" onclick="toggleCard(${idx})">
+      <div class="card-main">
+        <div class="card-icon">${item.icon}</div>
+        <div class="card-info">
+          <div class="card-name">${item.name}</div>
+          <div class="card-sub">Expected: <strong>${item.expectedCount}</strong></div>
+        </div>
+        <span class="status-badge badge-pending" id="badge-${idx}">Tap to confirm</span>
+      </div>
+      <div class="confirm-row" id="confirm-row-${idx}">
+        <button class="confirm-btn" onclick="confirmAllPresent(event,${idx})">✅ All Present <span class="qty">(${item.expectedCount})</span></button>
+      </div>
+      <div class="count-row" id="count-row-${idx}">
+        <span class="count-label">Or adjust:</span>
+        <div class="count-controls">
+          <button class="count-btn minus" onclick="adjustCount(event,${idx},-1)">−</button>
+          <div class="count-display" id="count-${idx}">${item.expectedCount}</div>
+          <button class="count-btn plus"  onclick="adjustCount(event,${idx},+1)">+</button>
+        </div>
+        <span class="count-status" id="count-status-${idx}" style="background:#F1F5F9;color:var(--slate);">Awaiting</span>
+      </div>
+      <div class="issue-row" id="issue-row-${idx}">
+        <textarea class="note-input" id="note-${idx}" placeholder="Note which items are missing (e.g. 2 spoon excavators missing)" onclick="event.stopPropagation()"></textarea>
+        <div class="photo-row">
+          <button class="cam-btn" onclick="openCam(event,${idx})">📷 Take Photo</button>
+          <input type="file" accept="image/*" capture="environment" class="cam-input" id="cam-${idx}" onchange="handlePhoto(${idx},this)">
+          <img class="thumb" id="thumb-${idx}" src="" alt="">
+        </div>
+      </div>
+    </div>`;
+  } else {
+    // Check type
+    return `
+    <div class="check-card" id="card-${idx}" onclick="toggleCard(${idx})">
+      <div class="card-main">
+        <div class="card-icon">${item.icon}</div>
+        <div class="card-info">
+          <div class="card-name">${item.name}</div>
+          <div class="card-sub">Tap to check status</div>
+        </div>
+        <span class="status-badge badge-pending" id="badge-${idx}">Pending</span>
+      </div>
+      <div class="action-row" id="action-row-${idx}">
+        <button class="action-btn" onclick="setCheck(event,${idx},'ok')">✅ OK</button>
+        <button class="action-btn" onclick="setCheck(event,${idx},'damaged')">🔴 Damaged</button>
+        <button class="action-btn" onclick="setCheck(event,${idx},'missing')">⚠️ Missing</button>
+      </div>
+      <div class="issue-row" id="issue-row-${idx}">
+        <textarea class="note-input" id="note-${idx}" placeholder="Describe the issue..." onclick="event.stopPropagation()"></textarea>
+        <div class="photo-row">
+          <button class="cam-btn" onclick="openCam(event,${idx})">📷 Take Photo</button>
+          <input type="file" accept="image/*" capture="environment" class="cam-input" id="cam-${idx}" onchange="handlePhoto(${idx},this)">
+          <img class="thumb" id="thumb-${idx}" src="" alt="">
+        </div>
+      </div>
+    </div>`;
+  }
+}
+
+// ── TOGGLE CARD ──────────────────────────────────────────────
+function toggleCard(idx) {
+  const card = document.getElementById('card-'+idx);
+  card.classList.toggle('expanded');
+}
+
+// ── CHECK TYPE ACTIONS ───────────────────────────────────────
+function setCheck(e, idx, status) {
+  e.stopPropagation();
+  const card  = document.getElementById('card-'+idx);
+  const badge = document.getElementById('badge-'+idx);
+
+  results[idx] = { status, type:'check', actual:status==='ok'?1:0, expected:1 };
+
+  card.classList.remove('status-ok','status-damaged','status-missing','expanded','has-issue');
+  badge.classList.remove('badge-ok','badge-damaged','badge-missing','badge-pending');
+
+  if (status==='ok') {
+    card.classList.add('status-ok');
+    badge.classList.add('badge-ok');
+    badge.textContent='✅ OK';
+  } else if (status==='damaged') {
+    card.classList.add('status-damaged','has-issue');
+    badge.classList.add('badge-damaged');
+    badge.textContent='🔴 Damaged';
+  } else {
+    card.classList.add('status-missing','has-issue');
+    badge.classList.add('badge-missing');
+    badge.textContent='⚠️ Missing';
+  }
+  updateProgress();
+}
+
+// ── COUNT TYPE: CONFIRM ALL PRESENT ──────────────────────────
+// One-tap "yes, the room has the full expected count" action.
+// Without this, count-type items required nurses to tap +/- at least
+// once to register a result, otherwise submission flagged the room
+// as an incomplete check.
+function confirmAllPresent(e, idx) {
+  e.stopPropagation();
+  const item     = selectedRoom.items[idx];
+  const display  = document.getElementById('count-' + idx);
+  const cs       = document.getElementById('count-status-' + idx);
+  const card     = document.getElementById('card-' + idx);
+  const badge    = document.getElementById('badge-' + idx);
+  const expected = item.expectedCount || 1;
+
+  display.textContent = expected;
+  results[idx] = { status: 'ok', type: 'count', actual: expected, expected };
+
+  cs.textContent = '✅ Full';
+  cs.style.background = 'var(--green-pale)';
+  cs.style.color      = 'var(--green)';
+
+  card.classList.add('status-ok');
+  card.classList.remove('status-short', 'status-missing', 'has-issue');
+  badge.className   = 'status-badge badge-ok';
+  badge.textContent = `${expected}/${expected}`;
+
+  updateProgress();
+}
+
+// ── COUNT TYPE ACTIONS ───────────────────────────────────────
+function adjustCount(e, idx, delta) {
+  e.stopPropagation();
+  const item    = selectedRoom.items[idx];
+  const display = document.getElementById('count-'+idx);
+  const cs      = document.getElementById('count-status-'+idx);
+  const card    = document.getElementById('card-'+idx);
+  const badge   = document.getElementById('badge-'+idx);
+
+  let cur = parseInt(display.textContent) || 0;
+  cur = Math.max(0, cur + delta);
+  display.textContent = cur;
+
+  const expected = item.expectedCount || 1;
+  let status;
+  if (cur === 0) {
+    status = 'missing';
+    cs.textContent = '⚠️ None';
+    cs.style.background = 'var(--amber-pale)'; cs.style.color = 'var(--amber)';
+    card.classList.add('status-missing','has-issue');
+    card.classList.remove('status-ok','status-short');
+    badge.className = 'status-badge badge-missing'; badge.textContent = `0/${expected}`;
+  } else if (cur < expected) {
+    status = 'short';
+    cs.textContent = `⚠️ ${cur}/${expected}`;
+    cs.style.background = 'var(--amber-pale)'; cs.style.color = 'var(--amber)';
+    card.classList.add('status-short','has-issue');
+    card.classList.remove('status-ok','status-missing');
+    badge.className = 'status-badge badge-short'; badge.textContent = `${cur}/${expected}`;
+  } else {
+    status = 'ok';
+    cs.textContent = '✅ Full';
+    cs.style.background = 'var(--green-pale)'; cs.style.color = 'var(--green)';
+    card.classList.add('status-ok');
+    card.classList.remove('status-short','status-missing','has-issue');
+    badge.className = 'status-badge badge-ok'; badge.textContent = `${cur}/${expected}`;
+  }
+
+  results[idx] = { status, type:'count', actual:cur, expected };
+  updateProgress();
+}
+
+// ── PHOTO ────────────────────────────────────────────────────
+function openCam(e, idx) {
+  e.stopPropagation();
+  document.getElementById('cam-'+idx).click();
+}
+function handlePhoto(idx, input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoData[idx] = ev.target.result;
+    const t = document.getElementById('thumb-'+idx);
+    t.src = ev.target.result; t.classList.add('show');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── PROGRESS ─────────────────────────────────────────────────
+function updateProgress() {
+  const total   = selectedRoom.items.length;
+  const checked = Object.keys(results).length;
+  const okCount = Object.values(results).filter(r=>r.status==='ok').length;
+  const issues  = checked - okCount;
+  const pending = total - checked;
+  const pct     = total > 0 ? Math.round(checked/total*100) : 0;
+
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('progressLabel').textContent = `${checked} of ${total} checked`;
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('countOk').textContent = okCount;
+  document.getElementById('countIssues').textContent = issues;
+  document.getElementById('countPending').textContent = pending;
+  document.getElementById('submitSub').textContent =
+    pending > 0 ? `${pending} items still pending` : '✅ All items checked — ready to submit!';
+}
+
+// ── SUBMIT ───────────────────────────────────────────────────
+async function submitAll() {
+  const nurse = document.getElementById('nurseInput').value.trim();
+  if (!nurse) { alert('Please enter your name.'); return; }
+
+  const items  = selectedRoom.items;
+  const total  = items.length;
+  const checked = Object.keys(results).length;
+
+  if (checked < total) {
+    const go = confirm(`${total - checked} item(s) not yet checked. Submit anyway?`);
+    if (!go) return;
+  }
+
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').textContent = 'Submitting...';
+
+  const entries = items.map((item, idx) => {
+    const r = results[idx] || { status:'NOT CHECKED', actual:'', expected:item.expectedCount };
+    return {
+      action:    'equipCheck',
+      room:      selectedRoom.name,
+      itemName:  item.name,
+      type:      item.type,
+      expected:  item.expectedCount,
+      actual:    r.actual !== undefined ? r.actual : '',
+      status:    r.status ? r.status.toUpperCase() : 'NOT CHECKED',
+      nurseName: nurse,
+      notes:     (document.getElementById('note-'+idx)||{}).value || '',
+      photoBase64: photoData[idx] || null,
+      gpsCoords,
+    };
+  });
+
+  const issues = entries.filter(e => ['DAMAGED','MISSING','SHORT'].includes(e.status));
+
+  if (scriptUrl && scriptUrl.startsWith('https://script.google.com')) {
+    for (let idx = 0; idx < entries.length; idx++) {
+      const entry = { ...entries[idx], isLastItem: idx === entries.length - 1 };
+      try { await sendToScript(entry); } catch(e) { console.warn('Submit error:', e); }
+    }
+  }
+
+  // Save locally so history persists
+  const log = JSON.parse(localStorage.getItem('cs_equip_log')||'[]');
+  log.unshift({ room:selectedRoom.name, nurse, date:new Date().toISOString(), total, issues:issues.length });
+  localStorage.setItem('cs_equip_log', JSON.stringify(log.slice(0,50)));
+
+  // Show overlay
+  document.getElementById('ovIcon').textContent   = issues.length > 0 ? '⚠️' : '✅';
+  document.getElementById('ovTitle').textContent  = issues.length > 0 ? 'Issues Reported' : 'All Clear!';
+  document.getElementById('ovMsg').textContent    = `${selectedRoom.name} · ${total} items checked · Logged in ClinicStock`;
+  const oi = document.getElementById('ovIssues');
+  if (issues.length > 0) {
+    oi.style.display = 'block';
+    oi.innerHTML = `<strong style="color:#FCD34D;">⚠️ ${issues.length} issue(s) flagged — manager notified</strong><br>` +
+      issues.map(i=>`· ${i.itemName}: ${i.status}${i.type==='count'?` (found ${i.actual}, expected ${i.expected})`:''}`).join('<br>');
+  } else {
+    oi.style.display = 'none';
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function restart() {
+  document.getElementById('overlay').classList.remove('show');
+  results = {}; photoData = {};
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').textContent = 'Submit Room Check →';
+  renderChecklist();
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
