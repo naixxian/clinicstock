@@ -237,6 +237,14 @@
         <button class="cat-chip" onclick="setCat(this,'Medications')">⚪ Medications</button>
       </div>
 
+      <!-- WHERE TO PUT IT (Stock In tab — added v7.1) -->
+      <p class="s-label">Destination <span class="req">*</span></p>
+      <select id="stockInTo" style="width:100%;padding:11px;font-size:14px;border:1.5px solid var(--border);border-radius:8px;background:var(--white);">
+        <option value="Store">📦 Store</option>
+        <option value="CSSD">🧼 CSSD</option>
+        <option value="Ortho Store">🦷 Ortho Store</option>
+      </select>
+
       <!-- ITEM SEARCH -->
       <p class="s-label">Item <span style="color:var(--red);">*</span></p>
       <div class="item-search-wrap" id="searchWrap">
@@ -378,21 +386,14 @@
     <div id="orderNurseView">
       <p class="s-label">New Order</p>
 
-      <div class="row-2">
-        <div class="input-group">
-          <label>To Location <span class="req">*</span></label>
-          <select id="orderTo">
-            <option value="">Loading...</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label>From <span class="req">*</span></label>
-          <select id="orderFrom">
-            <option value="Store">Store</option>
-            <option value="Ortho Store">Ortho Store</option>
-          </select>
-        </div>
+      <div class="input-group">
+        <label>To Location <span class="req">*</span> <span style="font-size:10px;color:var(--slate);font-weight:400;">(from Store)</span></label>
+        <select id="orderTo" style="width:100%;padding:11px;font-size:14px;border:1.5px solid var(--border);border-radius:8px;background:var(--white);">
+          <option value="">Loading...</option>
+        </select>
       </div>
+      <!-- v7.1: From is implicit (always Store) — hidden field for backend payload -->
+      <input type="hidden" id="orderFrom" value="Store">
 
       <p class="s-label">Add items to cart</p>
       <div class="cat-chips">
@@ -465,7 +466,7 @@
     <div style="font-size:48px;">🔧</div>
     <h2 style="font-size:18px;color:var(--navy);margin:14px 0 8px;">Weekly Equipment Check</h2>
     <p style="color:var(--slate);font-size:13px;margin-bottom:24px;">Audit room equipment, mark missing/damaged items, and capture a photo for proof.</p>
-    <a id="roomCheckLink" href="clinicstock_equip_v5.html" style="display:inline-block;padding:14px 28px;background:var(--teal);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:14px;">Open Equipment Check →</a>
+    <a id="roomCheckLink" href="clinicstock_equip_v6.html" style="display:inline-block;padding:14px 28px;background:var(--teal);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:14px;">Open Equipment Check →</a>
     <p style="color:var(--slate);font-size:11px;margin-top:30px;">In Phase D this will be merged into the same screen.</p>
   </div>
 </div>
@@ -783,20 +784,23 @@ async function submit() {
   const unit = selectedItem ? selectedItem.unit : (isNew ? document.getElementById('newUnit').value : 'Unit');
   const perUnit  = parseFloat(document.getElementById('perUnit').value) || '';
   const supplier = document.getElementById('supplier').value.trim();
+  const stockInTo = (document.getElementById('stockInTo') || {}).value || 'Store';
   const entry = {
-    action:     'stockEntry',
+    action:       'stockEntry',
     itemName,
-    category:   selectedCat,
-    type:       selectedType,
-    date:       document.getElementById('txDate').value,
+    category:     selectedCat,
+    type:         selectedType,
+    date:         document.getElementById('txDate').value,
     qty,
     unit,
-    batchNo:    document.getElementById('batchNo').value.trim(),
-    expiryDate: document.getElementById('expiryDate').value,
+    batchNo:      document.getElementById('batchNo').value.trim(),
+    expiryDate:   document.getElementById('expiryDate').value,
     perUnit,
     supplier,
     nurseName,
-    notes:      document.getElementById('notes').value.trim() + (cfg.clinic ? ' [' + cfg.clinic + ']' : ''),
+    fromLocation: selectedType === 'IN' ? 'Supplier' : '',
+    toLocation:   selectedType === 'IN' ? stockInTo : '',
+    notes:        document.getElementById('notes').value.trim() + (cfg.clinic ? ' [' + cfg.clinic + ']' : ''),
   };
 
   // Save to local log
@@ -974,11 +978,13 @@ async function loadOrderLocations() {
     if (r.success && r.locations) {
       orderLocations = r.locations;
       const toSel = document.getElementById('orderTo');
-      const fromSel = document.getElementById('orderFrom');
-      const treatments = orderLocations.filter(l => l.type === 'Treatment Room' || l.type === 'Sterilization' || l.type === 'Mobile Tray');
-      const stores = orderLocations.filter(l => l.type === 'Store' || l.type === 'Mobile Tray');
-      toSel.innerHTML = treatments.map(l => `<option value="${l.name}">${l.name}</option>`).join('') || '<option>—</option>';
-      fromSel.innerHTML = stores.map(l => `<option value="${l.name}">${l.name}</option>`).join('') || '<option>Store</option>';
+      // Show only valid destinations: rooms, CSSD, Ortho Store
+      const destinations = orderLocations.filter(l =>
+        l.type === 'Treatment Room' ||
+        l.type === 'Sterilization' ||
+        l.type === 'Mobile Tray');
+      toSel.innerHTML = destinations.map(l =>
+        `<option value="${l.name}">${l.name}</option>`).join('') || '<option>—</option>';
       // Pre-fill from saved default
       const savedTo = localStorage.getItem('cs_default_room');
       if (savedTo) toSel.value = savedTo;
